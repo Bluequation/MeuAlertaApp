@@ -100,13 +100,13 @@ const ICONES: any = {
   coroalevel7: require('../../assets/images/coroalevel7.png'),
 
   // 💡 Adicione isto dentro do seu const ICONES = { ... }
-  arauto: require('../../assets/images/arauto.png'),
-  cacafaisca: require('../../assets/images/cacafaisca.png'),
-  dancadachuva: require('../../assets/images/dancadachuva.png'), 
-  amigodaterra: require('../../assets/images/amigodaterra.png'),
-  senhordosventos: require('../../assets/images/senhordosventos.png'),
-  sentineladarua: require('../../assets/images/sentineladarua.png'),
-  vigiadobreu: require('../../assets/images/vigiadobreu.png'),
+  //arauto: require('../../assets/images/arauto.png'),
+  //cacafaisca: require('../../assets/images/cacafaisca.png'),
+  //dancadachuva: require('../../assets/images/dancadachuva.png'), 
+  //amigodaterra: require('../../assets/images/amigodaterra.png'),
+  //senhordosventos: require('../../assets/images/senhordosventos.png'),
+  //sentineladarua: require('../../assets/images/sentineladarua.png'),
+  //vigiadobreu: require('../../assets/images/vigiadobreu.png'),
 };
 
 
@@ -190,6 +190,7 @@ export default function TelaDoMapa() {
   const [climaAtual, setClimaAtual] = useState<any>(null);
 
   const [localizacao, setLocalizacao] = useState<any>(null);
+  const [regiaoMapa, setRegiaoMapa] = useState<any>(null); // 👈 ADICIONE ESTA (Para a câmara)
   const [alertas, setAlertas] = useState<any[]>([]); 
   const [ranking, setRanking] = useState<any[]>([]);
 
@@ -327,26 +328,21 @@ export default function TelaDoMapa() {
 
   // 💡 LÓGICA DE AGRUPAMENTO (CLUSTERING) DEFINITIVA E INTELIGENTE
   const alertasAgrupados = useMemo(() => {
-    if (!localizacao) return alertas.map(a => ({...a, quantidade: 1}));
+    if (!regiaoMapa) return alertas.map(a => ({...a, quantidade: 1}));
+
+    if (regiaoMapa.longitudeDelta < 0.005) {
+      return alertas.map(a => ({...a, quantidade: 1}));
+    }
 
     const grupos: any[] = [];
-    
-    // 1. O SEGREDO DO ZOOM: Um raio de "sucção" muito mais agressivo!
-    // Mudámos a divisão (de /8 para /3). Agora a "bolha" engole muito mais pinos à volta.
-    const raioDinamico = localizacao.longitudeDelta / 4; 
-
-    // 2. MODO "VISTA DE PÁSSARO" (Zoom muito afastado)
-    // Se o usuário tirar muito o zoom para ver o estado/cidade, ignoramos a categoria
-    // e juntamos absolutamente tudo na mesma bolha para limpar a tela.
-    const zoomMuitoAfastado = localizacao.longitudeDelta > 0.03;
+    const raioDinamico = regiaoMapa.longitudeDelta / 12; 
+    const zoomMuitoAfastado = regiaoMapa.longitudeDelta > 0.06;
 
     alertas.forEach(alerta => {
       let foiAgrupado = false;
       for (let grupo of grupos) {
          const distancia = calcularDistancia(alerta.coordenada.latitude, alerta.coordenada.longitude, grupo.coordenada.latitude, grupo.coordenada.longitude);
 
-         // REGRAS DE FUSÃO:
-         // Está dentro da área de sucção? E (É da mesma categoria OU o zoom está muito longe?)
          if (distancia < raioDinamico && (alerta.categoria === grupo.categoria || zoomMuitoAfastado)) {
              grupo.quantidade += 1;
              foiAgrupado = true;
@@ -356,38 +352,37 @@ export default function TelaDoMapa() {
       if (!foiAgrupado) grupos.push({ ...alerta, quantidade: 1 });
     });
     return grupos;
-  }, [alertas, localizacao]);
+  }, [alertas, regiaoMapa]);
 
   // 💡 LÓGICA DO PLUVIÔMETRO: Filtra alertas da região atual na tela e ordena por volume
   const pluviometrosDaRegiao = useMemo(() => {
-    if (!localizacao) return [];
+    // 💡 1. Trocamos para regiaoMapa aqui:
+    if (!regiaoMapa) return [];
 
-    // 1. Calcula as bordas matemáticas do mapa visível na tela
-    const minLat = localizacao.latitude - (localizacao.latitudeDelta / 2);
-    const maxLat = localizacao.latitude + (localizacao.latitudeDelta / 2);
-    const minLon = localizacao.longitude - (localizacao.longitudeDelta / 2);
-    const maxLon = localizacao.longitude + (localizacao.longitudeDelta / 2);
+    // 2. Trocamos tudo nas bordas matemáticas:
+    const minLat = regiaoMapa.latitude - (regiaoMapa.latitudeDelta / 2);
+    const maxLat = regiaoMapa.latitude + (regiaoMapa.latitudeDelta / 2);
+    const minLon = regiaoMapa.longitude - (regiaoMapa.longitudeDelta / 2);
+    const maxLon = regiaoMapa.longitude + (regiaoMapa.longitudeDelta / 2);
 
-    // 2. Filtra os dados e transforma
+    // 2. Filtra os dados e transforma (Esta parte fica igualzinha)
     const filtrados = alertas
       .filter(a => {
-         // Verifica se tem milímetros anotados e se a coordenada está dentro das bordas da tela
          const temMm = a.titulo.includes('mm)');
          const taNaTela = a.coordenada.latitude >= minLat && a.coordenada.latitude <= maxLat &&
                           a.coordenada.longitude >= minLon && a.coordenada.longitude <= maxLon;
          return temMm && taNaTela;
       })
       .map(a => {
-         // Extrai apenas o número do texto (ex: "Chuvas: Toró (15.5mm)" -> 15.5)
          const match = a.titulo.match(/\((\d+(?:\.\d+)?)\s*mm\)/i);
          const milimetros = match ? parseFloat(match[1]) : 0;
          return { ...a, milimetros };
       })
-      // 3. Ordena em ordem decrescente (do maior volume para o menor)
       .sort((a, b) => b.milimetros - a.milimetros);
 
     return filtrados;
-  }, [alertas, localizacao]);
+    // 💡 3. E o mais importante: trocamos na lista de dependências no final!
+  }, [alertas, regiaoMapa]);
 
   const tocarSomDeSucesso = async () => {
     try {
@@ -563,14 +558,15 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
   };
 
   // 💡 FUNÇÃO PARA ABRIR O AGRUPAMENTO COM ZOOM
+  // 💡 FUNÇÃO PARA ABRIR O AGRUPAMENTO COM ZOOM
   const aproximarZoom = (coordenada: any) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     mapaRef.current?.animateToRegion({
       latitude: coordenada.latitude,
       longitude: coordenada.longitude,
-      latitudeDelta: localizacao.latitudeDelta / 4,
-      longitudeDelta: localizacao.longitudeDelta / 4,
-    }, 500); 
+      latitudeDelta: 0.002,
+      longitudeDelta: 0.002,
+    }, 500);
   };
 
   // 💡 OPÇÃO 1: Deslizamento por Tempo (Timing)
@@ -627,6 +623,10 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
 
       // Pede a localização atual real do GPS do celular
       let location = await Location.getCurrentPositionAsync({});
+      const inicio = { latitude: location.coords.latitude, longitude: location.coords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+      
+      setLocalizacao(inicio); // Guarda o GPS
+      setRegiaoMapa(inicio);  // 👈 ADICIONE ESTA LINHA (A câmara começa no GPS)
 
       // Pega na "câmera" do mapa e faz ela deslizar até ao usuário
       mapaRef.current?.animateCamera(
@@ -826,13 +826,16 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <MapView 
          provider={PROVIDER_GOOGLE}
+         //mapType="mutedStandard"
+         //showsPointsOfInterest={false}
          ref={mapaRef}
          style={styles.mapa} 
          initialRegion={localizacao}
          customMapStyle={estiloMapaMelhorado}
          showsUserLocation={true}
          onPress={aoTocarNoMapa} 
-      >
+        onRegionChangeComplete={(novaRegiao) => setRegiaoMapa(novaRegiao)}
+        >
         {alertasAgrupados.map(grupo => {
           if (grupo.quantidade === 1) {
             return (
@@ -876,6 +879,7 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
             // 💡 NOTA EDUCATIVA: O Marker já tem uma Hitbox padrão, 
             // mas seus filhos (Views) podem expandir isso no Android.
             anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
           >
 
             {/* 💡 NOVA VIEW: Esta caixa invisível expande a área de toque */}
