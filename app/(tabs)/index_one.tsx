@@ -1,22 +1,3 @@
-/*
-===============================================================================
-VERSÃO 2 — CÓDIGO ORGANIZADO E COMENTADO PARA ESTUDO
-===============================================================================
-
-Objetivo desta versão:
-- Organizar visualmente o arquivo por seções.
-- Acrescentar comentários didáticos para facilitar o estudo.
-- Preservar a lógica original do código.
-- Não alterar nomes de variáveis, funções, estados, imports, estilos ou fluxo geral.
-
-Observação:
-Esta versão foi estruturada para leitura e compreensão. As seções ajudam a
-encontrar rapidamente imports, constantes, estados, efeitos, funções,
-gamificação, interface e estilos.
-
-===============================================================================
-*/
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions, TextInput, Alert, Animated, ScrollView, Modal, Image, Platform, KeyboardAvoidingView, StatusBar } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -30,18 +11,8 @@ import { collection, addDoc, onSnapshot, updateDoc, doc, query, orderBy, setDoc,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
-// =============================================================================
-// 1. CONSTANTES GERAIS DA TELA
-// =============================================================================
-
 const ALTURA_TELA = Dimensions.get('window').height;
 const LARGURA_TELA = Dimensions.get('window').width;
-
-
-// =============================================================================
-// 2. CONFIGURAÇÃO VISUAL DO MAPA
-// =============================================================================
 
 // 🎨 Estilo minimalista para deixar o mapa branco e limpo
 // 🎨 Estilo "Prateado": Limpo, mas com ruas visíveis e água azul clara
@@ -94,11 +65,6 @@ const estiloMapaMelhorado = [
   }
 ];
 
-
-// =============================================================================
-// 3. DICIONÁRIO DE ÍCONES E IMAGENS PRINCIPAIS
-// =============================================================================
-
 const ICONES: any = {
   Usuario: require('../../assets/images/Usuario_3d.png'),
   Perfil_cacto: require('../../assets/images/Perfil_cacto.png'),
@@ -144,11 +110,6 @@ const ICONES: any = {
 };
 
 
-
-// =============================================================================
-// 4. DICIONÁRIO DE CLIMA: CÓDIGOS DA API → EMOJI/TEXTO
-// =============================================================================
-
 // 💡 TRADUTOR DE CLIMA (Código da API para Emoji/Texto)
 const TRADUTOR_CLIMA: Record<number, { emoji: string, texto: string }> = {
   0: { emoji: '☀️', texto: 'Céu Limpo' },
@@ -169,11 +130,6 @@ const TRADUTOR_CLIMA: Record<number, { emoji: string, texto: string }> = {
 };
 
 
-
-// =============================================================================
-// 5. IMAGENS DA FAZENDINHA / SISTEMA DE EVOLUÇÃO
-// =============================================================================
-
 // 💡 DICIONÁRIO DE IMAGENS ATUALIZADO (13 ESTÁGIOS)
   // Certifique-se de que os arquivos na pasta 'assets/images' tenham esses nomes exatos.
   const IMAGENS_FAZENDINHA: Record<string, any> = {
@@ -192,29 +148,14 @@ const TRADUTOR_CLIMA: Record<number, { emoji: string, texto: string }> = {
     fazenda13: require('../../assets/images/fazenda13.png'),
   };
 
-
-// =============================================================================
-// 6. FUNÇÕES AUXILIARES GERAIS
-// =============================================================================
-
 const calcularDistancia = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   return Math.sqrt(Math.pow(lat1 - lat2, 2) + Math.pow(lon1 - lon2, 2));
 };
 
 
-
-// =============================================================================
-// 7. COMPONENTES AUXILIARES
-// =============================================================================
-
 // 💡 COMPONENTE MÁGICO DE TRANSIÇÃO DA FAZENDINHA (VERSÃO SÓLIDA)
 // 💡 COMPONENTE DA FAZENDINHA (Versão Simples e Rápida)
 const ImagemFazendinhaAnimada = ({ imagemAtual }: any) => {
-
-  // =============================================================================
-  // 10. RENDERIZAÇÃO DA INTERFACE
-  // =============================================================================
-
   return (
     <View style={{ width: '100%', height: '100%', backgroundColor: '#e1f5fe' }}>
       {IMAGENS_FAZENDINHA[imagemAtual] && (
@@ -226,11 +167,6 @@ const ImagemFazendinhaAnimada = ({ imagemAtual }: any) => {
     </View>
   );
 };
-
-
-// =============================================================================
-// 8. AJUSTES VISUAIS COMPARTILHADOS
-// =============================================================================
 
 const shadowStyle = Platform.select({
   ios: {
@@ -246,35 +182,17 @@ const shadowStyle = Platform.select({
 
 const keyboardBehavior = Platform.OS === 'ios' ? 'padding' : 'height';
 
-
-// =============================================================================
-// 9. COMPONENTE PRINCIPAL: TELA DO MAPA
-// =============================================================================
-
 export default function TelaDoMapa() {
-  // ---------------------------------------------------------------------------
-  // 9.1 REFERÊNCIAS E MEDIDAS SEGURAS DA TELA
-  // ---------------------------------------------------------------------------
-
   const insets = useSafeAreaInsets(); // 👈 Ligar o medidor de espaço
   const mapaRef = useRef<MapView>(null);
-
-  // ---------------------------------------------------------------------------
-  // 9.2 ESTADOS — CLIMA, LOCALIZAÇÃO, ALERTAS E RANKING
-  // ---------------------------------------------------------------------------
-
   const [deveAnimarFazenda, setDeveAnimarFazenda] = useState(false);
   // 💡 ESTADO DO CLIMA EM TEMPO REAL
   const [climaAtual, setClimaAtual] = useState<any>(null);
 
   const [localizacao, setLocalizacao] = useState<any>(null);
+  const [regiaoMapa, setRegiaoMapa] = useState<any>(null); // 👈 ADICIONE ESTA (Para a câmara)
   const [alertas, setAlertas] = useState<any[]>([]); 
   const [ranking, setRanking] = useState<any[]>([]);
-
-
-  // ---------------------------------------------------------------------------
-  // 9.3 ESTADOS E ANIMAÇÕES — FAZENDINHA
-  // ---------------------------------------------------------------------------
 
   // 💡 COLOQUE AQUI: Memória da Fazendinha e Pop-up
   const [modalFazendinhaAberto, setModalFazendinhaAberto] = useState(false);
@@ -315,11 +233,6 @@ export default function TelaDoMapa() {
   const estagioMemoriaRef = useRef<number | null>(null);
   const animacaoPopUpFazendinha = useRef(new Animated.Value(0)).current;
   
-
-  // ---------------------------------------------------------------------------
-  // 9.4 ESTADOS — CRIAÇÃO DE ALERTAS E MENUS DO MAPA
-  // ---------------------------------------------------------------------------
-
   const [modoSelecaoLocal, setModoSelecaoLocal] = useState(false);
   const [coordenadaAlerta, setCoordenadaAlerta] = useState<any>(null);
   
@@ -329,11 +242,6 @@ export default function TelaDoMapa() {
   
   const [milimetrosChuva, setMilimetrosChuva] = useState('');
   const [alertaSelecionado, setAlertaSelecionado] = useState<any>(null);
-
-
-  // ---------------------------------------------------------------------------
-  // 9.5 ESTADOS — PONTOS, ESTATÍSTICAS E USUÁRIO
-  // ---------------------------------------------------------------------------
 
   const [alertasVotados, setAlertasVotados] = useState<string[]>([]);
   const [pontos, setPontos] = useState(0); 
@@ -361,11 +269,6 @@ export default function TelaDoMapa() {
     }
   };
 
-
-  // ---------------------------------------------------------------------------
-  // 9.6 ESTADOS — LOGIN, PERFIL, MODAIS E INTERFACE
-  // ---------------------------------------------------------------------------
-
   const [modoEscolhaLogin, setModoEscolhaLogin] = useState(false);
   const [modoEdicaoEmail, setModoEdicaoEmail] = useState(false); 
   const [inputNome, setInputNome] = useState('');
@@ -379,11 +282,6 @@ export default function TelaDoMapa() {
   const animacaoAba = useRef(new Animated.Value(500)).current;
   const animacaoChuvaLikes = useRef(new Animated.Value(0)).current;
 
-
-
-  // ---------------------------------------------------------------------------
-  // 9.7 EFEITOS — CLIMA, LOCALIZAÇÃO, FIREBASE E RANKING
-  // ---------------------------------------------------------------------------
 
   // 💡 BUSCADOR DE CLIMA (Roda sempre que a localização principal muda)
   useEffect(() => {
@@ -428,33 +326,23 @@ export default function TelaDoMapa() {
     return () => { escutaAlertas(); escutaRanking(); };
   }, []);
 
-
-  // ---------------------------------------------------------------------------
-  // 9.8 CÁLCULOS MEMORIZADOS — AGRUPAMENTO E PLUVIÔMETRO
-  // ---------------------------------------------------------------------------
-
   // 💡 LÓGICA DE AGRUPAMENTO (CLUSTERING) DEFINITIVA E INTELIGENTE
   const alertasAgrupados = useMemo(() => {
-    if (!localizacao) return alertas.map(a => ({...a, quantidade: 1}));
+    if (!regiaoMapa) return alertas.map(a => ({...a, quantidade: 1}));
+
+    if (regiaoMapa.longitudeDelta < 0.005) {
+      return alertas.map(a => ({...a, quantidade: 1}));
+    }
 
     const grupos: any[] = [];
-    
-    // 1. O SEGREDO DO ZOOM: Um raio de "sucção" muito mais agressivo!
-    // Mudámos a divisão (de /8 para /3). Agora a "bolha" engole muito mais pinos à volta.
-    const raioDinamico = localizacao.longitudeDelta / 4; 
-
-    // 2. MODO "VISTA DE PÁSSARO" (Zoom muito afastado)
-    // Se o usuário tirar muito o zoom para ver o estado/cidade, ignoramos a categoria
-    // e juntamos absolutamente tudo na mesma bolha para limpar a tela.
-    const zoomMuitoAfastado = localizacao.longitudeDelta > 0.03;
+    const raioDinamico = regiaoMapa.longitudeDelta / 12; 
+    const zoomMuitoAfastado = regiaoMapa.longitudeDelta > 0.06;
 
     alertas.forEach(alerta => {
       let foiAgrupado = false;
       for (let grupo of grupos) {
          const distancia = calcularDistancia(alerta.coordenada.latitude, alerta.coordenada.longitude, grupo.coordenada.latitude, grupo.coordenada.longitude);
 
-         // REGRAS DE FUSÃO:
-         // Está dentro da área de sucção? E (É da mesma categoria OU o zoom está muito longe?)
          if (distancia < raioDinamico && (alerta.categoria === grupo.categoria || zoomMuitoAfastado)) {
              grupo.quantidade += 1;
              foiAgrupado = true;
@@ -464,43 +352,37 @@ export default function TelaDoMapa() {
       if (!foiAgrupado) grupos.push({ ...alerta, quantidade: 1 });
     });
     return grupos;
-  }, [alertas, localizacao]);
+  }, [alertas, regiaoMapa]);
 
   // 💡 LÓGICA DO PLUVIÔMETRO: Filtra alertas da região atual na tela e ordena por volume
   const pluviometrosDaRegiao = useMemo(() => {
-    if (!localizacao) return [];
+    // 💡 1. Trocamos para regiaoMapa aqui:
+    if (!regiaoMapa) return [];
 
-    // 1. Calcula as bordas matemáticas do mapa visível na tela
-    const minLat = localizacao.latitude - (localizacao.latitudeDelta / 2);
-    const maxLat = localizacao.latitude + (localizacao.latitudeDelta / 2);
-    const minLon = localizacao.longitude - (localizacao.longitudeDelta / 2);
-    const maxLon = localizacao.longitude + (localizacao.longitudeDelta / 2);
+    // 2. Trocamos tudo nas bordas matemáticas:
+    const minLat = regiaoMapa.latitude - (regiaoMapa.latitudeDelta / 2);
+    const maxLat = regiaoMapa.latitude + (regiaoMapa.latitudeDelta / 2);
+    const minLon = regiaoMapa.longitude - (regiaoMapa.longitudeDelta / 2);
+    const maxLon = regiaoMapa.longitude + (regiaoMapa.longitudeDelta / 2);
 
-    // 2. Filtra os dados e transforma
+    // 2. Filtra os dados e transforma (Esta parte fica igualzinha)
     const filtrados = alertas
       .filter(a => {
-         // Verifica se tem milímetros anotados e se a coordenada está dentro das bordas da tela
          const temMm = a.titulo.includes('mm)');
          const taNaTela = a.coordenada.latitude >= minLat && a.coordenada.latitude <= maxLat &&
                           a.coordenada.longitude >= minLon && a.coordenada.longitude <= maxLon;
          return temMm && taNaTela;
       })
       .map(a => {
-         // Extrai apenas o número do texto (ex: "Chuvas: Toró (15.5mm)" -> 15.5)
          const match = a.titulo.match(/\((\d+(?:\.\d+)?)\s*mm\)/i);
          const milimetros = match ? parseFloat(match[1]) : 0;
          return { ...a, milimetros };
       })
-      // 3. Ordena em ordem decrescente (do maior volume para o menor)
       .sort((a, b) => b.milimetros - a.milimetros);
 
     return filtrados;
-  }, [alertas, localizacao]);
-
-
-  // ---------------------------------------------------------------------------
-  // 9.9 FUNÇÕES — SONS, VIBRAÇÃO E PONTUAÇÃO
-  // ---------------------------------------------------------------------------
+    // 💡 3. E o mais importante: trocamos na lista de dependências no final!
+  }, [alertas, regiaoMapa]);
 
   const tocarSomDeSucesso = async () => {
     try {
@@ -525,11 +407,6 @@ export default function TelaDoMapa() {
     animacaoChuvaLikes.setValue(0);
     Animated.timing(animacaoChuvaLikes, { toValue: 1, duration: 3000, useNativeDriver: true }).start(() => setMostrarLike(false));
   };
-
-
-  // ---------------------------------------------------------------------------
-  // 9.10 FUNÇÕES — CRIAÇÃO E REGISTRO DE ALERTAS
-  // ---------------------------------------------------------------------------
 
   const registrarAlerta = async (categoria: string, detalhe: string, nomeDaImagem: string) => {
     let tituloDoPino = `${categoria}: ${detalhe}`;
@@ -589,11 +466,6 @@ export default function TelaDoMapa() {
       setMilimetrosChuva('');
     } catch (error) { Alert.alert("Erro ao salvar"); }
   };
-
-
-  // ---------------------------------------------------------------------------
-  // 9.11 FUNÇÕES — VOTAÇÃO E ATUALIZAÇÃO DE ALERTAS
-  // ---------------------------------------------------------------------------
 
 const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
     if (alertasVotados.includes(idAlerta)) { 
@@ -660,11 +532,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
     }
   };
 
-
-  // ---------------------------------------------------------------------------
-  // 9.12 FUNÇÕES — INTERAÇÃO COM O MAPA
-  // ---------------------------------------------------------------------------
-
   const iniciarAlerta = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setCoordenadaAlerta({ latitude: localizacao.latitude, longitude: localizacao.longitude });
@@ -691,14 +558,15 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
   };
 
   // 💡 FUNÇÃO PARA ABRIR O AGRUPAMENTO COM ZOOM
+  // 💡 FUNÇÃO PARA ABRIR O AGRUPAMENTO COM ZOOM
   const aproximarZoom = (coordenada: any) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     mapaRef.current?.animateToRegion({
       latitude: coordenada.latitude,
       longitude: coordenada.longitude,
-      latitudeDelta: localizacao.latitudeDelta / 4,
-      longitudeDelta: localizacao.longitudeDelta / 4,
-    }, 500); 
+      latitudeDelta: 0.002,
+      longitudeDelta: 0.002,
+    }, 500);
   };
 
   // 💡 OPÇÃO 1: Deslizamento por Tempo (Timing)
@@ -755,6 +623,10 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
 
       // Pede a localização atual real do GPS do celular
       let location = await Location.getCurrentPositionAsync({});
+      const inicio = { latitude: location.coords.latitude, longitude: location.coords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+      
+      setLocalizacao(inicio); // Guarda o GPS
+      setRegiaoMapa(inicio);  // 👈 ADICIONE ESTA LINHA (A câmara começa no GPS)
 
       // Pega na "câmera" do mapa e faz ela deslizar até ao usuário
       mapaRef.current?.animateCamera(
@@ -774,11 +646,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
       console.log("Não foi possível obter a localização", error);
     }
   };
-
-
-  // ---------------------------------------------------------------------------
-  // 9.13 FUNÇÕES E DADOS — MENUS DE ALERTA
-  // ---------------------------------------------------------------------------
 
   const abrirSubmenu = (menu: string) => {
     Haptics.selectionAsync();
@@ -821,11 +688,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
      registrarAlerta(config.categoria, opcaoSelecionada.detalhe, opcaoSelecionada.img);
   };
 
-
-  // ---------------------------------------------------------------------------
-  // 9.14 FUNÇÕES — CONTA DO USUÁRIO E SINCRONIZAÇÃO
-  // ---------------------------------------------------------------------------
-
   const salvarConta = async () => {
     if(inputNome.trim() === '') { Alert.alert('Ops!', 'Digite um nome.'); return; }
     const apelido = inputNome.trim();
@@ -848,11 +710,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
        setNomeUsuario(apelido); setContaCriada(true); setModoEscolhaLogin(false); setModoEdicaoEmail(false); 
     } catch (error) { Alert.alert("Erro", "Verifique a internet."); }
   };
-
-
-  // ---------------------------------------------------------------------------
-  // 9.15 GAMIFICAÇÃO — NÍVEIS, DISTINTIVOS E FAZENDINHA
-  // ---------------------------------------------------------------------------
 
   // 💡 DOCUMENTAÇÃO: Agora usamos as chaves do dicionário ICONES em vez de emojis
   const niveis = [
@@ -956,11 +813,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
       }
   }, [totalContribuicoes]);
   
-
-  // ---------------------------------------------------------------------------
-  // 9.16 FLAGS DE INTERFACE — ALERTA SELECIONADO
-  // ---------------------------------------------------------------------------
-
   const ehAlertaPositivo = alertaSelecionado?.titulo.includes('Livre') || alertaSelecionado?.titulo.includes('Já voltou');
   const ehOAutorDoAlertaSelecionado = alertaSelecionado && nomeUsuario !== 'Convidado' && (nomeUsuario.trim() === alertaSelecionado.autor.trim());
 
@@ -974,13 +826,16 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <MapView 
          provider={PROVIDER_GOOGLE}
+         //mapType="mutedStandard"
+         //showsPointsOfInterest={false}
          ref={mapaRef}
          style={styles.mapa} 
          initialRegion={localizacao}
          customMapStyle={estiloMapaMelhorado}
          showsUserLocation={true}
          onPress={aoTocarNoMapa} 
-      >
+        onRegionChangeComplete={(novaRegiao) => setRegiaoMapa(novaRegiao)}
+        >
         {alertasAgrupados.map(grupo => {
           if (grupo.quantidade === 1) {
             return (
@@ -1024,6 +879,7 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
             // 💡 NOTA EDUCATIVA: O Marker já tem uma Hitbox padrão, 
             // mas seus filhos (Views) podem expandir isso no Android.
             anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
           >
 
             {/* 💡 NOVA VIEW: Esta caixa invisível expande a área de toque */}
@@ -1759,11 +1615,6 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
     </View>
   );
 }
-
-
-// =============================================================================
-// 11. ESTILOS DA INTERFACE
-// =============================================================================
 
 const styles = StyleSheet.create({
   // 💡 ESTILOS DA FAZENDINHA
