@@ -26,7 +26,7 @@ import { Audio } from 'expo-av';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons, FontAwesome,FontAwesome5, FontAwesome6, Foundation, AntDesign } from '@expo/vector-icons';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, onSnapshot, updateDoc, doc, query, orderBy, setDoc, getDoc, limit, increment } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, updateDoc, doc, query, orderBy, setDoc, getDoc, limit, increment, runTransaction } from 'firebase/firestore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -573,6 +573,7 @@ export default function TelaDoMapa() {
       titulo: tituloDoPino, 
       icone: nomeDaImagem, 
       categoria: categoria, 
+      detalhe: detalhe,
       hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 
       autor: nomeUsuario.trim(),
       criadoEm: new Date().getTime(),
@@ -606,14 +607,34 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
       const ehOAutor = (nomeUsuario.trim() === alertaSelecionado.autor.trim());
       
       if (acao === 'remover') {
-        if (ehOAutor) { 
+        if (alertaSelecionado.categoria === 'Energia') {
+          // O retorno é gravado só quando o autor confirma ou o relato recebe
+          // três confirmações. Uma contribuição isolada não equivale a retorno.
+          // Transação evita sobrescrever o primeiro horário confirmado.
+          await runTransaction(db, async transacao => {
+            const documento = await transacao.get(alertaRef);
+            if (!documento.exists()) throw new Error('Alerta indisponível.');
+            const dados = documento.data();
+            if (typeof dados.restabelecidoEm === 'number' && dados.restabelecidoEm > 0) {
+              return;
+            }
+            const votos = Number(dados.votosResolvido) || 0;
+            const proximo = ehOAutor ? Math.max(3, votos) : votos + 1;
+            const atualizacao: Record<string, number | string> = {
+              votosResolvido: proximo
+            };
+            if (proximo >= 3) {
+              atualizacao.restabelecidoEm = Date.now();
+              atualizacao.restabelecimentoFonte = 'comunidade';
+            }
+            transacao.update(alertaRef, atualizacao);
+          });
+        } else if (ehOAutor) {
           await updateDoc(alertaRef, { votosResolvido: 3 });
-          // 💡 Removido: Alert de resolvido imediatamente
-        } else { 
+        } else {
           await updateDoc(alertaRef, { votosResolvido: increment(1) });
-          // 💡 Removido: Alert de registo de atualização
         }
-        
+
         ganharPontos(5);
         tocarSomDeSucesso(); // 👈 Adicionamos o som de sucesso aqui!
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // 👈 E a vibração
@@ -660,6 +681,17 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
     }
   };
 
+
+  const confirmarRestabelecimentoEnergia = (idAlerta: string) => {
+    Alert.alert(
+      'A energia voltou?',
+      'Confirme apenas se o fornecimento foi restabelecido neste local. O horário registrado será o da confirmação comunitária.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Confirmar retorno', onPress: () => void votarAlerta(idAlerta, 'remover') }
+      ]
+    );
+  };
 
   // ---------------------------------------------------------------------------
   // 9.12 FUNÇÕES — INTERAÇÃO COM O MAPA
@@ -1624,10 +1656,14 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
         {ehOAutorDoAlertaSelecionado ? (
             <TouchableOpacity 
                 style={{ flex: 1, backgroundColor: '#333333', paddingVertical: 14, borderRadius: 25, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }} 
-                onPress={() => votarAlerta(alertaSelecionado.id, 'remover')}
+                onPress={() => alertaSelecionado.categoria === 'Energia'
+                  ? confirmarRestabelecimentoEnergia(alertaSelecionado.id)
+                  : votarAlerta(alertaSelecionado.id, 'remover')}
             >
                 <Ionicons name="thumbs-up" size={18} color="white" />
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15, marginLeft: 8 }}>Já resolveu!</Text>
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15, marginLeft: 8 }}>
+                  {alertaSelecionado.categoria === 'Energia' ? 'A luz voltou' : 'Já resolveu!'}
+                </Text>
             </TouchableOpacity>
         ) : (
             ehAlertaPositivo ? (
@@ -1658,10 +1694,14 @@ const votarAlerta = async (idAlerta: string, acao: 'manter' | 'remover') => {
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={{ flex: 1, backgroundColor: '#1a94cd', paddingVertical: 14, borderRadius: 25, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }} 
-                        onPress={() => votarAlerta(alertaSelecionado.id, 'remover')}
+                        onPress={() => alertaSelecionado.categoria === 'Energia'
+                          ? confirmarRestabelecimentoEnergia(alertaSelecionado.id)
+                          : votarAlerta(alertaSelecionado.id, 'remover')}
                     >
                         <FontAwesome name="thumbs-up" size={18} color="white" />
-                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15, marginLeft: 8 }}>Já resolveu</Text>
+                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15, marginLeft: 8 }}>
+                          {alertaSelecionado.categoria === 'Energia' ? 'A luz voltou' : 'Já resolveu'}
+                        </Text>
                     </TouchableOpacity>
                 </>
             )
